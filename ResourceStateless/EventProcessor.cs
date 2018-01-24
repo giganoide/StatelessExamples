@@ -88,24 +88,23 @@ namespace ResourceStateless
         }
 
         State _state = State.Idle;
-        
-        StateMachine<State, IEvent> _machine;
-        StateMachine<State, IEvent>.TriggerWithParameters<string, int> _setArticleAndTimeoutTrigger;
 
-        string _resource;
-        string _callee;
+        readonly StateMachine<State, IEvent> _machine;
+        readonly StateMachine<State, IEvent>.TriggerWithParameters<string, int> _setArticleAndTimeoutTrigger;
+
+        readonly string _resource;
 
         private string _article;
         private int _timeout;
-        Timer timeoutTimer = new Timer();
+        private readonly Timer _timeoutTimer = new Timer();
         
         public EventProcessor(string resource)
         {
             _resource = resource;
 
-            timeoutTimer.Elapsed += TimeoutTimer_Elapsed;
-            timeoutTimer.Enabled = false;
-            timeoutTimer.AutoReset = false;
+            _timeoutTimer.Elapsed += TimeoutTimer_Elapsed;
+            _timeoutTimer.Enabled = false;
+            _timeoutTimer.AutoReset = false;
 
             _machine = new StateMachine<State, IEvent>(() => _state, s => _state = s);
 
@@ -113,6 +112,7 @@ namespace ResourceStateless
 
 
             _machine.Configure(State.Idle)
+                    //.OnEntryFrom(_setArticleAndTimeoutTrigger, OnSetArticleAndTimeout)
                     .Permit(new StartEvent(), State.Running)
                     .Permit(new PlannedWaitStartEvent(), State.PlannedWait);
                 
@@ -134,27 +134,27 @@ namespace ResourceStateless
         {
             _article = article;
             _timeout = timeout * 1000;
-            timeoutTimer.Interval = _timeout;
+            _timeoutTimer.Interval = _timeout;
             Console.WriteLine("{0:HH:mm:ss.fff} [Timer:] Timeout set to " + timeout + "!", DateTime.Now);
         }
         
         void TimeoutTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            timeoutTimer.Stop();
+            _timeoutTimer.Stop();
             Console.WriteLine("{0:HH:mm:ss.fff} [Timer:] Timeout!", DateTime.Now);
         }
 
         void StartCallTimer()
         {
-            timeoutTimer.Stop();
-            timeoutTimer.Interval = _timeout;
-            timeoutTimer.Start();
+            _timeoutTimer.Stop();
+            _timeoutTimer.Interval = _timeout;
+            _timeoutTimer.Start();
             //Console.WriteLine("[Timer:] Call started at {0}", DateTime.Now);
         }
 
         void StopCallTimer()
         {
-            timeoutTimer.Stop();
+            _timeoutTimer.Stop();
             //Console.WriteLine("[Timer:] Call ended at {0}", DateTime.Now);
         }
         
@@ -166,7 +166,8 @@ namespace ResourceStateless
         public void Start(string article, int timeout)
         {
             //_machine.Fire(_setArticleAndTimeoutTrigger, article, timeout);
-            _machine.Fire(new StartEvent(article, timeout));
+            //_machine.Fire(new StartEvent(article, timeout));
+            //_machine.Fire(new StartEvent());
         }
 
         public void Done()
